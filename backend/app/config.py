@@ -4,7 +4,7 @@
 import logging
 from functools import lru_cache
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, SecretStr
 from pydantic_settings import BaseSettings
 
 
@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     environment: str = "dev"
     testing: bool = 0
     database_url: AnyUrl = None
+    spotify_client_id: str
+    spotify_client_secret: SecretStr
+    spotify_redirect_uri: str
 
 
 @lru_cache()
