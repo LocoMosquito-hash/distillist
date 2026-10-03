@@ -1,4 +1,4 @@
-# project/app/config.py
+# backend/app/config.py
 
 
 import logging

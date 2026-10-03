@@ -1,4 +1,4 @@
-# project/app/db.py
+# backend/app/db.py
 
 
 import os

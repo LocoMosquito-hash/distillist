@@ -1,10 +1,10 @@
 services:
 
   web:
-    build: ./project
+    build: ./backend
     command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
     volumes:
-      - ./project:/usr/src/app
+      - ./backend:/usr/src/app
     ports:
       - 8004:8000
     environment:
@@ -18,7 +18,7 @@ services:
   # new
   web-db:
     build:
-      context: ./project/db
+      context: ./db
       dockerfile: Dockerfile
     expose:
       - 5432

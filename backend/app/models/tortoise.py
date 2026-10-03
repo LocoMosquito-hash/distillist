@@ -1,4 +1,4 @@
-# project/app/models/tortoise.py
+# backend/app/models/tortoise.py
 
 
 from tortoise import fields, models

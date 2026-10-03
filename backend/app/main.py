@@ -1,4 +1,4 @@
-# project/app/main.py
+# backend/app/main.py
 
 import os
 
