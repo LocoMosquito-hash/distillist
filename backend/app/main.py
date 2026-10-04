@@ -5,13 +5,14 @@ import os
 from fastapi import FastAPI, Depends
 from tortoise.contrib.fastapi import register_tortoise
 
-from app.api import auth
+from app.api import auth, spotify
 from app.config import get_settings, Settings
 
 
 app = FastAPI()
 
 app.include_router(auth.router)
+app.include_router(spotify.router)
 
 
 register_tortoise(

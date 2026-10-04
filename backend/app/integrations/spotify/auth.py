@@ -17,6 +17,7 @@ TOKEN_URL: str = "https://accounts.spotify.com/api/token"
 SCOPES: list[str] = [
     "playlist-read-private",
     "playlist-read-collaborative",
+    "user-read-currently-playing",
 ]
 
 
