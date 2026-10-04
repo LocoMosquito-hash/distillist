@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     spotify_client_id: str
     spotify_client_secret: SecretStr
     spotify_redirect_uri: str
+    token_encryption_key: SecretStr
+    session_secret_key: SecretStr
+    session_ttl_seconds: int = 60 * 60 * 24 * 7  # 7 days
 
 
 @lru_cache()
