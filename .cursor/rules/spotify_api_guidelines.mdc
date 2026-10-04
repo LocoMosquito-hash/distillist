@@ -1,0 +1,28 @@
+---
+description: Guidelines for building with the Spotify Web API (auth, scopes, rate limits, ToS)
+alwaysApply: true
+---
+
+# Spotify Web API Guidelines
+
+- **OpenAPI spec**: Use https://developer.spotify.com/reference/web-api/open-api-schema.yaml as the source of truth for endpoint paths, parameters, and response schemas. Do not guess endpoints or field names.
+- **Authorization**:
+  - User-specific data: Authorization Code with PKCE ([docs](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)).
+  - With a secure backend, Authorization Code ([docs](https://developer.spotify.com/documentation/web-api/tutorials/code-flow)) is also acceptable.
+  - Client Credentials only for public, non-user data.
+  - Never use the Implicit Grant flow (deprecated).
+- **Redirect URIs** ([docs](https://developer.spotify.com/documentation/web-api/concepts/redirect_uri)): Always HTTPS, except `http://127.0.0.1` for local development. Never use `http://localhost` or wildcard URIs.
+- **Scopes** ([docs](https://developer.spotify.com/documentation/web-api/concepts/scopes)): Request only the minimum scopes needed for the feature being built. Never request broad scopes preemptively.
+- **Token management** ([refresh docs](https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens)):
+  - Store tokens securely.
+  - Never expose the Client Secret in client-side code.
+  - Implement token refresh; send the user through authorization again when the refresh token expires.
+- **Rate limits**: On HTTP 429, use exponential backoff and respect the `Retry-After` header. Never retry immediately or in tight loops.
+- **Deprecated endpoints**: Do not use them.
+  - Prefer `/playlists/{id}/items` over `/playlists/{id}/tracks`.
+  - Prefer `/me/library` over the type-specific library endpoints.
+- **Error handling**: Handle every HTTP error code documented in the OpenAPI schema. Read the returned error message and surface meaningful feedback to the user.
+- **Developer Terms** ([terms](https://developer.spotify.com/terms)):
+  - Do not cache Spotify content beyond what is needed for immediate use.
+  - Always attribute content to Spotify.
+  - Never use Spotify data to train machine learning models.

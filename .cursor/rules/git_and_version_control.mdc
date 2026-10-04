@@ -1,0 +1,10 @@
+---
+description: Git and version control conventions (no commits unless asked, end-of-chat change summary)
+alwaysApply: true
+---
+
+# Git and Version Control
+
+- **No commits**: Never run `git commit` (or amend, push, or otherwise write history) unless I explicitly ask you to.
+- **Read-only git is fine**: You may read the git history and run diffs (`git log`, `git diff`, `git show`, `git status`) whenever useful.
+- **End-of-chat summary**: If files were modified during the chat, finish with a short description of the changes so I can use it to improve my commit messages.

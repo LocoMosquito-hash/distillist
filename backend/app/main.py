@@ -5,10 +5,13 @@ import os
 from fastapi import FastAPI, Depends
 from tortoise.contrib.fastapi import register_tortoise
 
+from app.api import auth
 from app.config import get_settings, Settings
 
 
 app = FastAPI()
+
+app.include_router(auth.router)
 
 
 register_tortoise(
