@@ -1,37 +1,39 @@
 # backend/app/services/spotify_service.py
 
 
-from datetime import timedelta
-
-from cryptography.fernet import InvalidToken
-from tortoise import timezone
+from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
 from app.config import Settings
 from app.integrations.spotify import client
+from app.integrations.spotify.client import SpotifyApiError
 from app.integrations.spotify.models import SpotifyPlaylist, SpotifyTrack
 from app.models.tortoise import User
 from app.schemas.spotify import NowPlayingOut, PlaylistOut, PlaylistPageOut, TrackOut
-from app.security import decrypt_token
+from app.services import auth_service
 
-# Treat a token as expired slightly early so it doesn't lapse mid-request.
-_EXPIRY_MARGIN: timedelta = timedelta(seconds=30)
-
-
-class SpotifyTokenExpiredError(Exception):
-    """The user's stored Spotify token can't be used; they need to log in again."""
+T = TypeVar("T")
 
 
-def _get_access_token(settings: Settings, user: User) -> str:
-    """Return the user's decrypted access token, or raise if it is expired/unreadable.
+async def _call_spotify(
+    settings: Settings,
+    user: User,
+    call: Callable[[str], Awaitable[T]],
+) -> T:
+    """Run a Spotify API call with the user's token, refreshing the token when needed.
 
-    Token refresh isn't implemented yet (planned for the next step).
+    The token is refreshed up front if it is (nearly) expired. If Spotify still answers
+    401 (e.g. the token was revoked), refresh once and retry; a second 401 is reported.
     """
-    if user.token_expires_at <= timezone.now() + _EXPIRY_MARGIN:
-        raise SpotifyTokenExpiredError("Spotify session expired, please log in again")
+    access_token = await auth_service.get_valid_access_token(settings, user)
     try:
-        return decrypt_token(settings, user.access_token)
-    except InvalidToken as exc:
-        raise SpotifyTokenExpiredError("Stored Spotify token is unreadable, please log in again") from exc
+        return await call(access_token)
+    except SpotifyApiError as exc:
+        if exc.status_code != 401:
+            raise
+
+    access_token = await auth_service.get_valid_access_token(settings, user, force_refresh=True)
+    return await call(access_token)
 
 
 def _to_playlist_out(playlist: SpotifyPlaylist) -> PlaylistOut:
@@ -63,7 +65,9 @@ async def list_playlists(
     settings: Settings, user: User, limit: int, offset: int
 ) -> PlaylistPageOut:
     """Fetch one page of the user's playlists live from Spotify (nothing is stored)."""
-    page = await client.get_playlists(_get_access_token(settings, user), limit, offset)
+    page = await _call_spotify(
+        settings, user, lambda token: client.get_playlists(token, limit, offset)
+    )
     return PlaylistPageOut(
         items=[_to_playlist_out(playlist) for playlist in page.items],
         total=page.total,
@@ -74,7 +78,7 @@ async def list_playlists(
 
 async def get_now_playing(settings: Settings, user: User) -> NowPlayingOut:
     """Fetch what the user is playing right now, live from Spotify (nothing is stored)."""
-    playing = await client.get_currently_playing(_get_access_token(settings, user))
+    playing = await _call_spotify(settings, user, client.get_currently_playing)
 
     if playing is None:
         return NowPlayingOut(is_playing=False, type="none")

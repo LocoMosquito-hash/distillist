@@ -5,19 +5,25 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import current_user
 from app.config import Settings, get_settings
+from app.integrations.spotify.auth import SpotifyAuthError
 from app.integrations.spotify.client import SpotifyApiError
 from app.models.tortoise import User
 from app.schemas.spotify import NowPlayingOut, PlaylistPageOut
 from app.services import spotify_service
-from app.services.spotify_service import SpotifyTokenExpiredError
+from app.services.auth_service import SpotifyTokenExpiredError
 
 router = APIRouter(prefix="/spotify", tags=["spotify"])
 
+SpotifyFailure = SpotifyApiError | SpotifyAuthError | SpotifyTokenExpiredError
 
-def _spotify_http_error(exc: SpotifyApiError | SpotifyTokenExpiredError) -> HTTPException:
+
+def _spotify_http_error(exc: SpotifyFailure) -> HTTPException:
     """Translate Spotify-side failures into meaningful responses for the client."""
     if isinstance(exc, SpotifyTokenExpiredError):
         return HTTPException(status.HTTP_401_UNAUTHORIZED, str(exc))
+
+    if isinstance(exc, SpotifyAuthError):  # Spotify failed while refreshing the token
+        return HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc))
 
     if exc.status_code == 401:
         return HTTPException(
@@ -53,7 +59,7 @@ async def playlists(
     """One page of the logged-in user's playlists, fetched live from Spotify."""
     try:
         return await spotify_service.list_playlists(settings, user, limit, offset)
-    except (SpotifyApiError, SpotifyTokenExpiredError) as exc:
+    except (SpotifyApiError, SpotifyAuthError, SpotifyTokenExpiredError) as exc:
         raise _spotify_http_error(exc) from exc
 
 
@@ -65,5 +71,5 @@ async def currently_playing(
     """The track the logged-in user is playing right now, fetched live from Spotify."""
     try:
         return await spotify_service.get_now_playing(settings, user)
-    except (SpotifyApiError, SpotifyTokenExpiredError) as exc:
+    except (SpotifyApiError, SpotifyAuthError, SpotifyTokenExpiredError) as exc:
         raise _spotify_http_error(exc) from exc
