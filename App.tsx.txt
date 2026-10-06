@@ -1,0 +1,294 @@
+import { useState, useRef, useEffect } from "react";
+import { ChevronDown, ChevronRight, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// Nav data
+// ---------------------------------------------------------------------------
+
+type NavItem = {
+  id: string;
+  label: string;
+  children?: { id: string; label: string }[];
+};
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    id: "playlists",
+    label: "Playlists",
+    children: [
+      { id: "import-playlists", label: "Import playlists" },
+      { id: "saved-playlists", label: "Saved playlists" },
+    ],
+  },
+  {
+    id: "service-and-stats",
+    label: "Service and stats",
+  },
+];
+
+// ---------------------------------------------------------------------------
+// TitleBar
+// ---------------------------------------------------------------------------
+
+function TitleBar() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  return (
+    <div
+      className="relative flex items-center shrink-0"
+      style={{
+        backgroundColor: "#161614",
+        height: "44px",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderTopLeftRadius: "0.75rem",
+        borderTopRightRadius: "0.75rem",
+      }}
+    >
+      <span
+        className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
+        style={{ fontFamily: "var(--font-sans)", fontWeight: 500, fontSize: "14px", letterSpacing: "0.06em", color: "rgba(247,246,243,0.85)" }}
+      >
+        distillist
+      </span>
+
+      <div ref={menuRef} className="absolute right-0 top-0 h-full flex items-center">
+        <button
+          onClick={() => setMenuOpen((prev) => !prev)}
+          className="flex items-center gap-1.5 h-full px-4"
+          style={{
+            color: menuOpen ? "rgba(247,246,243,0.95)" : "rgba(247,246,243,0.55)",
+            backgroundColor: menuOpen ? "rgba(247,246,243,0.07)" : "transparent",
+            transition: "color 150ms, background-color 150ms",
+          }}
+          onMouseEnter={(e) => { if (!menuOpen) (e.currentTarget as HTMLButtonElement).style.color = "rgba(247,246,243,0.8)"; }}
+          onMouseLeave={(e) => { if (!menuOpen) (e.currentTarget as HTMLButtonElement).style.color = "rgba(247,246,243,0.55)"; }}
+        >
+          <span style={{ fontFamily: "var(--font-sans)", fontWeight: 400, fontSize: "13px", letterSpacing: "0.01em" }}>
+            User Name
+          </span>
+          <ChevronDown size={13} strokeWidth={2} style={{ transition: "transform 200ms ease", transform: menuOpen ? "rotate(180deg)" : "rotate(0deg)" }} />
+        </button>
+
+        {menuOpen && (
+          <div
+            className="absolute top-full right-2 mt-1 rounded-lg overflow-hidden"
+            style={{ backgroundColor: "#1e1e1c", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 8px 24px rgba(0,0,0,0.35)", minWidth: "148px", zIndex: 50 }}
+          >
+            <button
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left"
+              style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 400, color: "rgba(247,246,243,0.75)", transition: "background-color 100ms, color 100ms" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(247,246,243,0.08)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(247,246,243,0.95)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(247,246,243,0.75)"; }}
+            >
+              <Settings size={13} strokeWidth={1.75} />
+              Settings
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SidebarNav
+// ---------------------------------------------------------------------------
+
+function SidebarNav({ selectedId, onSelect }: { selectedId: string | null; onSelect: (id: string) => void }) {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ playlists: true });
+
+  function toggleGroup(id: string) {
+    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  return (
+    <nav className="flex flex-col gap-0.5 px-2 py-2 overflow-y-auto flex-1">
+      {NAV_ITEMS.map((item) => {
+        const hasChildren = item.children && item.children.length > 0;
+        const isOpen = !!openGroups[item.id];
+
+        return (
+          <div key={item.id}>
+            {/* First-level item */}
+            <button
+              onClick={() => hasChildren ? toggleGroup(item.id) : onSelect(item.id)}
+              className="w-full flex items-center justify-between rounded-md px-2"
+              style={{
+                height: "30px",
+                fontSize: "12px",
+                fontWeight: 600,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: selectedId === item.id && !hasChildren ? "rgba(22,22,20,0.9)" : "rgba(22,22,20,0.45)",
+                backgroundColor: selectedId === item.id && !hasChildren ? "rgba(22,22,20,0.07)" : "transparent",
+                transition: "color 150ms, background-color 150ms",
+              }}
+              onMouseEnter={(e) => {
+                if (selectedId !== item.id || hasChildren)
+                  (e.currentTarget as HTMLButtonElement).style.color = "rgba(22,22,20,0.75)";
+              }}
+              onMouseLeave={(e) => {
+                if (selectedId !== item.id || hasChildren)
+                  (e.currentTarget as HTMLButtonElement).style.color = hasChildren ? "rgba(22,22,20,0.45)" : "rgba(22,22,20,0.45)";
+              }}
+            >
+              <span>{item.label}</span>
+              {hasChildren && (
+                <ChevronRight
+                  size={12}
+                  strokeWidth={2.5}
+                  style={{ transition: "transform 180ms ease", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", flexShrink: 0 }}
+                />
+              )}
+            </button>
+
+            {/* Second-level items */}
+            {hasChildren && isOpen && (
+              <div className="flex flex-col gap-0.5 mt-0.5 mb-1">
+                {item.children!.map((child) => (
+                  <button
+                    key={child.id}
+                    onClick={() => onSelect(child.id)}
+                    className="w-full flex items-center rounded-md text-left"
+                    style={{
+                      height: "28px",
+                      paddingLeft: "20px",
+                      paddingRight: "8px",
+                      fontSize: "13px",
+                      fontWeight: selectedId === child.id ? 500 : 400,
+                      color: selectedId === child.id ? "rgba(22,22,20,0.9)" : "rgba(22,22,20,0.55)",
+                      backgroundColor: selectedId === child.id ? "rgba(22,22,20,0.07)" : "transparent",
+                      transition: "color 150ms, background-color 150ms",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedId !== child.id) {
+                        (e.currentTarget as HTMLButtonElement).style.color = "rgba(22,22,20,0.8)";
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(22,22,20,0.04)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedId !== child.id) {
+                        (e.currentTarget as HTMLButtonElement).style.color = "rgba(22,22,20,0.55)";
+                        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                      }
+                    }}
+                  >
+                    {child.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sidebar
+// ---------------------------------------------------------------------------
+
+function Sidebar({
+  expanded,
+  onToggle,
+  selectedId,
+  onSelect,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div
+      className="relative shrink-0 flex flex-col"
+      style={{
+        width: expanded ? "220px" : "48px",
+        transition: "width 220ms cubic-bezier(0.4, 0, 0.2, 1)",
+        backgroundColor: "var(--sidebar)",
+        borderRight: "1px solid rgba(22,22,20,0.08)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Toggle button row */}
+      <div className="flex items-center shrink-0" style={{ height: "44px", padding: "0 10px", borderBottom: "1px solid rgba(22,22,20,0.06)" }}>
+        <button
+          onClick={onToggle}
+          title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          className="flex items-center justify-center rounded-md"
+          style={{
+            width: "28px",
+            height: "28px",
+            color: "rgba(22,22,20,0.4)",
+            backgroundColor: "transparent",
+            transition: "color 150ms, background-color 150ms",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(22,22,20,0.75)"; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(22,22,20,0.06)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(22,22,20,0.4)"; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent"; }}
+        >
+          {expanded ? <PanelLeftClose size={16} strokeWidth={1.75} /> : <PanelLeftOpen size={16} strokeWidth={1.75} />}
+        </button>
+      </div>
+
+      {/* Nav — only visible when expanded */}
+      <div style={{ opacity: expanded ? 1 : 0, transition: "opacity 150ms ease", pointerEvents: expanded ? "auto" : "none", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <SidebarNav selectedId={selectedId} onSelect={onSelect} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WorkArea
+// ---------------------------------------------------------------------------
+
+function WorkArea() {
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [selectedNav, setSelectedNav] = useState<string | null>("import-playlists");
+
+  return (
+    <div
+      className="flex flex-1 min-h-0"
+      style={{ borderBottomLeftRadius: "0.75rem", borderBottomRightRadius: "0.75rem", overflow: "hidden" }}
+    >
+      <Sidebar
+        expanded={sidebarExpanded}
+        onToggle={() => setSidebarExpanded((v) => !v)}
+        selectedId={selectedNav}
+        onSelect={setSelectedNav}
+      />
+      <div className="flex-1 bg-background" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6" style={{ fontFamily: "var(--font-sans)" }}>
+      <div
+        className="w-full max-w-5xl rounded-xl flex flex-col"
+        style={{ minHeight: "80vh", boxShadow: "0 0 0 1px rgba(22,22,20,0.08), 0 4px 24px rgba(22,22,20,0.08)" }}
+      >
+        <TitleBar />
+        <WorkArea />
+      </div>
+    </div>
+  );
+}

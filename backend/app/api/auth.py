@@ -42,16 +42,18 @@ async def login(settings: Settings = Depends(get_settings)) -> RedirectResponse:
     return response
 
 
-@router.get("/spotify/callback", response_model=UserOut)
+@router.get("/spotify/callback")
 async def callback(
-    response: Response,
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
     state_cookie: str | None = Cookie(default=None, alias=STATE_COOKIE),
     settings: Settings = Depends(get_settings),
-) -> UserOut:
-    """Spotify redirects back here after the user accepts or denies access."""
+) -> RedirectResponse:
+    """Spotify redirects back here after the user accepts or denies access.
+
+    On success the session cookie is set and the browser is sent on to the frontend.
+    """
     if error is not None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Spotify authorization failed: {error}")
 
@@ -62,10 +64,11 @@ async def callback(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid state")
 
     try:
-        user, session = await auth_service.login_with_spotify(settings, code)
+        _, session = await auth_service.login_with_spotify(settings, code)
     except (SpotifyAuthError, SpotifyApiError) as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 
+    response = RedirectResponse(url=settings.frontend_url, status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(STATE_COOKIE)
     response.set_cookie(
         key=SESSION_COOKIE,
@@ -75,8 +78,7 @@ async def callback(
         samesite="lax",
         secure=settings.environment != "dev",
     )
-
-    return UserOut(spotify_id=user.spotify_id, display_name=user.display_name)
+    return response
 
 
 @router.get("/me", response_model=UserOut)

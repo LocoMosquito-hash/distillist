@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     spotify_client_id: str
     spotify_client_secret: SecretStr
     spotify_redirect_uri: str
+    frontend_url: str = "http://127.0.0.1:5173"  # where the browser lands after logging in
     token_encryption_key: SecretStr
     session_secret_key: SecretStr
     session_ttl_seconds: int = 60 * 60 * 24 * 7  # 7 days

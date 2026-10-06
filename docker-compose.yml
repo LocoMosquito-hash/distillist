@@ -17,6 +17,19 @@ services:
     depends_on:   # new
       - web-db
 
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules   # keep the container's installed packages (don't shadow with the host folder)
+    ports:
+      - 5173:5173
+    environment:
+      - VITE_API_PROXY_TARGET=http://web:8000
+    depends_on:
+      - web
+
   # new
   web-db:
     build:
